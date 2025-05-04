@@ -3,8 +3,14 @@ from typing import Optional
 import os
 import googlemaps
 
+if os.environ.get("RENDER") != "true":
+    from dotenv import load_dotenv
+    load_dotenv()
+
 app = FastAPI()
+
 api_key = os.getenv("GOOGLE_MAPS_API_KEY")
+print("ENV KEYS:", list(os.environ.keys()))
 if not api_key:
     raise ValueError("Google Maps API Key is missing.")
 gmaps = googlemaps.Client(key=api_key)
