@@ -1,11 +1,9 @@
 from fastapi import FastAPI, Query
 from typing import Optional
 import os
-from dotenv import load_dotenv
 import googlemaps
 
 app = FastAPI()
-load_dotenv() 
 api_key = os.getenv("GOOGLE_MAPS_API_KEY")
 if not api_key:
     raise ValueError("Google Maps API Key is missing.")
