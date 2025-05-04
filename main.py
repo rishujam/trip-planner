@@ -5,8 +5,10 @@ from dotenv import load_dotenv
 import googlemaps
 
 app = FastAPI()
-load_dotenv(dotenv_path="./.env") 
+load_dotenv() 
 api_key = os.getenv("GOOGLE_MAPS_API_KEY")
+if not api_key:
+    raise ValueError("Google Maps API Key is missing.")
 gmaps = googlemaps.Client(key=api_key)
 
 @app.get("/stays")
