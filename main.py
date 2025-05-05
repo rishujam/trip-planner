@@ -71,11 +71,38 @@ def get_stays(
         "next_page_token": places_result.get("next_page_token")
     }
 
-@app.get("/resolve-link")
-def resolve_google_maps_link(shared_url: str):
-    try:
-        response = requests.get(shared_url, allow_redirects=True, timeout=5)
-        final_url = response.url 
-        return {"final_url": final_url}
-    except Exception as e:
-        return {"error": str(e)}
+
+def extract_place_id(shared_url: str) -> str:
+    match = re.search(r"1s([a-zA-Z0-9:]+)", shared_url)
+    return match.group(1) if match else None
+
+@app.get("/resolve-place")
+def resolve_place(shared_url: str):
+    place_id = extract_place_id(shared_url)
+    if not place_id:
+        return {"error": "Could not extract place ID."}
+
+    details = gmaps.place(
+        place_id=place_id,
+        fields=["geometry/location", "name", "photos"]
+    )
+
+    result = details.get("result", {})
+    location = result.get("geometry", {}).get("location", {})
+    name = result.get("name", "Unknown")
+    lat, lon = location.get("lat"), location.get("lng")
+
+    # Photo thumbnail
+    photo_url = None
+    photos = result.get("photos")
+    if photos:
+        photo_ref = photos[0].get("photo_reference")
+        if photo_ref:
+            photo_url = f"https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference={photo_ref}&key={api_key}"
+
+    return {
+        "name": name,
+        "lat": lat,
+        "lon": lon,
+        "photo_url": photo_url
+    }
