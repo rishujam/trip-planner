@@ -1,7 +1,11 @@
+import requests
 from fastapi import FastAPI, Query
 from typing import Optional
 import os
 import googlemaps
+
+from dotenv import load_dotenv
+load_dotenv()
 
 if os.environ.get("RENDER") != "true":
     from dotenv import load_dotenv
@@ -66,3 +70,12 @@ def get_stays(
         "stays": stays,
         "next_page_token": places_result.get("next_page_token")
     }
+
+@app.get("/resolve-link")
+def resolve_google_maps_link(shared_url: str):
+    try:
+        response = requests.get(shared_url, allow_redirects=True, timeout=5)
+        final_url = response.url
+        return {"final_url": final_url}
+    except Exception as e:
+        return {"error": str(e)}
