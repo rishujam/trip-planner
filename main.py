@@ -3,6 +3,8 @@ from fastapi import FastAPI, Query
 from typing import Optional
 import os
 import googlemaps
+from urllib.parse import urlparse, parse_qs
+import re
 
 from dotenv import load_dotenv
 load_dotenv()
