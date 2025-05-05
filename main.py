@@ -75,7 +75,7 @@ def get_stays(
 def resolve_google_maps_link(shared_url: str):
     try:
         response = requests.get(shared_url, allow_redirects=True, timeout=5)
-        final_url = response.url
+        final_url = response.url 
         return {"final_url": final_url}
     except Exception as e:
         return {"error": str(e)}
