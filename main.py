@@ -16,7 +16,6 @@ if os.environ.get("RENDER") != "true":
 app = FastAPI()
 
 api_key = os.getenv("GOOGLE_MAPS_API_KEY")
-print("ENV KEYS:", list(os.environ.keys()))
 if not api_key:
     raise ValueError("Google Maps API Key is missing.")
 gmaps = googlemaps.Client(key=api_key)
@@ -74,16 +73,26 @@ def get_stays(
     }
 
 
-def extract_place_id(shared_url: str) -> str:
-    match = re.search(r"1s([a-zA-Z0-9:]+)", shared_url)
+def extract_place_id_from_url(url: str) -> str:
+    # Match place ID from long Google Maps URL
+    match = re.search(r"1s([a-zA-Z0-9:_-]+)", url)
     return match.group(1) if match else None
 
 @app.get("/resolve-place")
 def resolve_place(shared_url: str):
-    place_id = extract_place_id(shared_url)
+    # Step 1: Resolve redirect if it's a short link
+    try:
+        response = requests.get(shared_url, allow_redirects=True, timeout=5)
+        final_url = response.url
+    except Exception as e:
+        return {"error": f"Failed to resolve URL: {str(e)}"}
+
+    # Step 2: Extract place ID
+    place_id = extract_place_id_from_url(final_url)
     if not place_id:
         return {"error": "Could not extract place ID."}
 
+    # Step 3: Fetch details from Google Places API
     details = gmaps.place(
         place_id=place_id,
         fields=["geometry/location", "name", "photos"]
@@ -94,7 +103,7 @@ def resolve_place(shared_url: str):
     name = result.get("name", "Unknown")
     lat, lon = location.get("lat"), location.get("lng")
 
-    # Photo thumbnail
+    # Step 4: Photo thumbnail
     photo_url = None
     photos = result.get("photos")
     if photos:
