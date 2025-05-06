@@ -1,10 +1,8 @@
-import requests
 from fastapi import FastAPI, Query
 from typing import Optional
 import os
 import googlemaps
-from urllib.parse import urlparse, parse_qs
-import re
+# import uvicorn
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -14,6 +12,9 @@ if os.environ.get("RENDER") != "true":
     load_dotenv()
 
 app = FastAPI()
+
+# if __name__ == "__main__":
+#     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
 
 api_key = os.getenv("GOOGLE_MAPS_API_KEY")
 if not api_key:
@@ -70,50 +71,4 @@ def get_stays(
     return {
         "stays": stays,
         "next_page_token": places_result.get("next_page_token")
-    }
-
-
-def extract_place_id_from_url(url: str) -> str:
-    # Match place ID from long Google Maps URL
-    match = re.search(r"1s([a-zA-Z0-9:_-]+)", url)
-    return match.group(1) if match else None
-
-@app.get("/resolve-place")
-def resolve_place(shared_url: str):
-    # Step 1: Resolve redirect if it's a short link
-    try:
-        response = requests.get(shared_url, allow_redirects=True, timeout=5)
-        final_url = response.url
-    except Exception as e:
-        return {"error": f"Failed to resolve URL: {str(e)}"}
-
-    # Step 2: Extract place ID
-    place_id = extract_place_id_from_url(final_url)
-    if not place_id:
-        return {"error": "Could not extract place ID."}
-
-    # Step 3: Fetch details from Google Places API
-    details = gmaps.place(
-        place_id=place_id,
-        fields=["geometry/location", "name", "photos"]
-    )
-
-    result = details.get("result", {})
-    location = result.get("geometry", {}).get("location", {})
-    name = result.get("name", "Unknown")
-    lat, lon = location.get("lat"), location.get("lng")
-
-    # Step 4: Photo thumbnail
-    photo_url = None
-    photos = result.get("photos")
-    if photos:
-        photo_ref = photos[0].get("photo_reference")
-        if photo_ref:
-            photo_url = f"https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference={photo_ref}&key={api_key}"
-
-    return {
-        "name": name,
-        "lat": lat,
-        "lon": lon,
-        "photo_url": photo_url
     }
