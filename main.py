@@ -65,7 +65,8 @@ def get_stays(
         stays.append({
             "name": name,
             "phone": phone,
-            "photo_url": photo_url or "No photo available"
+            "photo_url": photo_url or "No photo available",
+            "place_id": place_id 
         })
 
     return {
