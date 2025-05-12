@@ -1,0 +1,63 @@
+{
+  "graph": {
+    "nodes": [
+      {
+        "id": "goal1",
+        "type": "goal",
+        "name": "Plan motorcycle itinerary from Delhi to Darma Valley",
+        "params": {
+          "trip_type": "one-way",
+          "start_date": "2025-06-01",
+          "vehicle": "motorcycle"
+        }
+      },
+      {
+        "id": "tool1",
+        "type": "tool",
+        "name": "DirectionsTool",
+        "description": "Returns driving route and breakdown of distance between origin and destination.",
+        "endpoint": "/directions"
+      },
+      {
+        "id": "tool2",
+        "type": "tool",
+        "name": "PlacesTool",
+        "description": "Finds nearby stays with contact info (lodging) near coordinates.",
+        "endpoint": "/stays"
+      },
+      {
+        "id": "memory1",
+        "type": "memory",
+        "name": "UserPreferences",
+        "data": {
+          "max_hours_highway": 6,
+          "max_hours_mountains": 6,
+          "min_stays_with_contact": 3,
+          "exploration_required": true
+        }
+      }
+    ],
+    "edges": [
+      {
+        "source": "goal1",
+        "target": "tool1",
+        "type": "uses"
+      },
+      {
+        "source": "goal1",
+        "target": "tool2",
+        "type": "uses"
+      },
+      {
+        "source": "goal1",
+        "target": "memory1",
+        "type": "references"
+      },
+      {
+        "source": "tool2",
+        "target": "tool1",
+        "type": "depends_on"
+      }
+    ]
+  }
+}
