@@ -4,7 +4,7 @@
       {
         "id": "goal1",
         "type": "goal",
-        "name": "Plan motorcycle itinerary from Delhi to Darma Valley",
+        "name": "Plan motorcycle itinerary between two places",
         "params": {
           "trip_type": "one-way",
           "start_date": "2025-06-01",
