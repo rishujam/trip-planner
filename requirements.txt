@@ -1,5 +1,5 @@
 fastapi
+openai
 uvicorn
 googlemaps
 python-dotenv
-openai
