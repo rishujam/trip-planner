@@ -1,14 +1,22 @@
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Depends
 from pydantic import BaseModel
 from openai import OpenAI
 import googlemaps
-from typing import Optional
+from typing import Optional, List
+from sqlalchemy.orm import Session
+
+# Import database models and session
+from database import get_db, Destination
 
 app = FastAPI()
 
 from dotenv import load_dotenv
 import os
 load_dotenv()
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
 
 # Load environment variables
 if os.environ.get("RENDER") != "true":
@@ -183,3 +191,110 @@ def get_stays(
         "stays": stays,
         "next_page_token": places_result.get("next_page_token")
     }
+
+# Pydantic models for Destination API
+class DestinationCreate(BaseModel):
+    name: str
+    lat: float
+    long: float
+    image_urls: List[str] = []
+
+class DestinationUpdate(BaseModel):
+    name: Optional[str] = None
+    lat: Optional[float] = None
+    long: Optional[float] = None
+    image_urls: Optional[List[str]] = None
+
+class DestinationResponse(BaseModel):
+    id: str
+    name: str
+    lat: float
+    long: float
+    image_urls: List[str]
+    created_at: int
+
+    class Config:
+        from_attributes = True
+
+# Destination CRUD endpoints
+@app.post("/destinations", response_model=DestinationResponse)
+async def create_destination(destination: DestinationCreate, db: Session = Depends(get_db)):
+    """Create a new destination"""
+    # Generate ID from coordinates
+    destination_id = Destination.generate_id(destination.lat, destination.long)
+    
+    # Check if destination already exists
+    existing_destination = db.query(Destination).filter(Destination.id == destination_id).first()
+    if existing_destination:
+        raise HTTPException(status_code=400, detail="Destination with these coordinates already exists")
+    
+    # Create new destination
+    db_destination = Destination(
+        id=destination_id,
+        name=destination.name,
+        lat=destination.lat,
+        long=destination.long,
+        image_urls=destination.image_urls
+    )
+    
+    db.add(db_destination)
+    db.commit()
+    db.refresh(db_destination)
+    
+    return db_destination
+
+@app.get("/destinations", response_model=List[DestinationResponse])
+async def get_destinations(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    """Get all destinations with pagination"""
+    destinations = db.query(Destination).offset(skip).limit(limit).all()
+    return destinations
+
+@app.get("/destinations/{destination_id}", response_model=DestinationResponse)
+async def get_destination(destination_id: str, db: Session = Depends(get_db)):
+    """Get a specific destination by ID"""
+    destination = db.query(Destination).filter(Destination.id == destination_id).first()
+    if destination is None:
+        raise HTTPException(status_code=404, detail="Destination not found")
+    return destination
+
+@app.put("/destinations/{destination_id}", response_model=DestinationResponse)
+async def update_destination(destination_id: str, destination_update: DestinationUpdate, db: Session = Depends(get_db)):
+    """Update a destination"""
+    db_destination = db.query(Destination).filter(Destination.id == destination_id).first()
+    if db_destination is None:
+        raise HTTPException(status_code=404, detail="Destination not found")
+    
+    # Update fields if provided
+    update_data = destination_update.dict(exclude_unset=True)
+    
+    # If lat or long is being updated, we need to generate a new ID
+    if 'lat' in update_data or 'long' in update_data:
+        new_lat = update_data.get('lat', db_destination.lat)
+        new_long = update_data.get('long', db_destination.long)
+        new_id = Destination.generate_id(new_lat, new_long)
+        
+        # Check if new ID already exists (different from current)
+        if new_id != destination_id:
+            existing = db.query(Destination).filter(Destination.id == new_id).first()
+            if existing:
+                raise HTTPException(status_code=400, detail="Destination with new coordinates already exists")
+            update_data['id'] = new_id
+    
+    for field, value in update_data.items():
+        setattr(db_destination, field, value)
+    
+    db.commit()
+    db.refresh(db_destination)
+    return db_destination
+
+@app.delete("/destinations/{destination_id}")
+async def delete_destination(destination_id: str, db: Session = Depends(get_db)):
+    """Delete a destination"""
+    db_destination = db.query(Destination).filter(Destination.id == destination_id).first()
+    if db_destination is None:
+        raise HTTPException(status_code=404, detail="Destination not found")
+    
+    db.delete(db_destination)
+    db.commit()
+    
+    return {"message": "Destination deleted successfully"}

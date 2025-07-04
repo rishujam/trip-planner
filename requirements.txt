@@ -3,3 +3,6 @@ openai
 uvicorn
 googlemaps
 python-dotenv
+psycopg2-binary
+sqlalchemy
+alembic
