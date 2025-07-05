@@ -22,6 +22,8 @@ if __name__ == "__main__":
 if os.environ.get("RENDER") != "true":
     load_dotenv()
 
+
+
 client = OpenAI(
     api_key=os.getenv("OPENAI_API_KEY"),
     organization=os.getenv("OPENAI_ORG_ID")
